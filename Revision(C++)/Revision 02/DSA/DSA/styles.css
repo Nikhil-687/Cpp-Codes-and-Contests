@@ -1,0 +1,28 @@
+.skills{
+    background-color: rgb(255, 255, 255);
+    /* color: aliceblue; */
+    /* border: 2px solid rgb(0, 41, 128); */
+    display: inline-block;
+    padding: 20px;
+    margin-bottom: 20px;
+    cursor: pointer;
+    user-select: none;
+    /* clip-path: ellipse(); */
+    text-align: center;
+    /* place-content: center; */
+    font-size: 5vw;
+    border-radius: 5px;
+    /* box-shadow: 2px 2px 5px 5px blanchedalmond; */
+    backface-visibility: hidden;
+    background-blend-mode:saturation;
+    opacity: 0.8;
+    /* box-shadow: inset 0px -19px 25px this 20 is the fill percent of ball ( -5 -> 35)15px rgba(109, 208, 102, 0.82), inset 0px -0px 25px 1px blue; */
+}
+.container{
+    max-width: 40vw;
+    min-height: 20vw;
+    user-select: none;
+    /* justify-content: center; */
+    background-color: rgba(250, 250, 250, 0.779);
+    
+}

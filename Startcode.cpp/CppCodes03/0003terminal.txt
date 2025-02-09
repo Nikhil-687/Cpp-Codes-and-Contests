@@ -1,0 +1,11 @@
+COMANDS:
+
+pwd
+ls
+cd ..  cd/
+cd file_name(without_space)
+mkdir directory_name
+touch file_name
+mv addres to_adress(absolute)
+cp addres to_adress/
+
