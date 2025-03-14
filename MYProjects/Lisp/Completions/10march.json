@@ -1,0 +1,22 @@
+{
+    "task1":"first 5 chapters solided",
+    "task2":
+    {
+        "subtask1":"gdb is not online compiler it is  powerful debugging tool for C ",
+        "subtask2":
+        {
+            "# commands":"processor directives",
+            "subdivisions":[
+                "#ifdef",
+                "#ifndef",
+                "#else",
+                "#endif",
+                "#if",
+                "#define",
+                "#if defined",
+                "#if !defined",
+                "#elif"
+            ]
+        }
+    }
+}
