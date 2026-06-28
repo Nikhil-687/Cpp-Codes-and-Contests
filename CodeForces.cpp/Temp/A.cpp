@@ -142,7 +142,7 @@ ll factorial(ll n){
 }
  
 
-int main() {
+int32_t main() {
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
     
