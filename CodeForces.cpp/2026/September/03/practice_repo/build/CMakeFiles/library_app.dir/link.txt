@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/library_app.dir/src/main.cpp.o CMakeFiles/library_app.dir/src/book.cpp.o CMakeFiles/library_app.dir/src/library.cpp.o -o library_app 

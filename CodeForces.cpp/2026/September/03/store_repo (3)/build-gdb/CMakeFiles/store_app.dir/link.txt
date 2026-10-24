@@ -1,0 +1,1 @@
+/usr/bin/c++ -g -O0 -g3 -fno-omit-frame-pointer -fsanitize=address,undefined CMakeFiles/store_app.dir/src/main.cpp.o CMakeFiles/store_app.dir/src/product.cpp.o CMakeFiles/store_app.dir/src/inventory.cpp.o CMakeFiles/store_app.dir/src/order.cpp.o CMakeFiles/store_app.dir/src/receipt.cpp.o CMakeFiles/store_app.dir/src/checkout.cpp.o -o store_app 

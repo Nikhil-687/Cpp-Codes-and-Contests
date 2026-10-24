@@ -1,0 +1,1 @@
+/usr/bin/c++ -g -O0 -g3 -fno-omit-frame-pointer CMakeFiles/store_tests.dir/test/test_suite.cpp.o CMakeFiles/store_tests.dir/src/product.cpp.o CMakeFiles/store_tests.dir/src/inventory.cpp.o CMakeFiles/store_tests.dir/src/order.cpp.o CMakeFiles/store_tests.dir/src/receipt.cpp.o CMakeFiles/store_tests.dir/src/checkout.cpp.o -o store_tests 

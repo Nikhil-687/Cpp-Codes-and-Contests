@@ -1,0 +1,1 @@
+/usr/bin/c++ -g CMakeFiles/library_tests.dir/test/test_library.cpp.o CMakeFiles/library_tests.dir/src/book.cpp.o CMakeFiles/library_tests.dir/src/library.cpp.o -o library_tests 

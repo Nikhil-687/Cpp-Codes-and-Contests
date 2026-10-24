@@ -1,0 +1,5 @@
+/home/konsol/WorkFolder/Cpp-Codes-and-Contests/CodeForces.cpp/2026/September/03/store_repo/build/CMakeFiles/store_app.dir
+/home/konsol/WorkFolder/Cpp-Codes-and-Contests/CodeForces.cpp/2026/September/03/store_repo/build/CMakeFiles/store_tests.dir
+/home/konsol/WorkFolder/Cpp-Codes-and-Contests/CodeForces.cpp/2026/September/03/store_repo/build/CMakeFiles/gdb_store_tests.dir
+/home/konsol/WorkFolder/Cpp-Codes-and-Contests/CodeForces.cpp/2026/September/03/store_repo/build/CMakeFiles/edit_cache.dir
+/home/konsol/WorkFolder/Cpp-Codes-and-Contests/CodeForces.cpp/2026/September/03/store_repo/build/CMakeFiles/rebuild_cache.dir

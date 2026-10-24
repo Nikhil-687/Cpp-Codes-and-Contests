@@ -1,0 +1,4 @@
+n(int) k(int)
+a(int)[n]
+c(int)[n]
+s(string)

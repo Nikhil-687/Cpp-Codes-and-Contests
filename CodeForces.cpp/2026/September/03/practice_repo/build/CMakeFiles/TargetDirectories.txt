@@ -1,0 +1,4 @@
+/home/konsol/WorkFolder/Cpp-Codes-and-Contests/CodeForces.cpp/2026/September/03/practice_repo/build/CMakeFiles/library_app.dir
+/home/konsol/WorkFolder/Cpp-Codes-and-Contests/CodeForces.cpp/2026/September/03/practice_repo/build/CMakeFiles/library_tests.dir
+/home/konsol/WorkFolder/Cpp-Codes-and-Contests/CodeForces.cpp/2026/September/03/practice_repo/build/CMakeFiles/edit_cache.dir
+/home/konsol/WorkFolder/Cpp-Codes-and-Contests/CodeForces.cpp/2026/September/03/practice_repo/build/CMakeFiles/rebuild_cache.dir

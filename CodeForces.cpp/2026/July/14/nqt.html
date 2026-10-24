@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NQT Mock Test Runner</title>
+<style>
+  :root{
+    --bg:#0F1218; --panel:#171C25; --panel2:#1D2430; --border:#2A3140;
+    --text:#E7EAF0; --dim:#8B93A5; --dim2:#5C6577;
+    --accent:#FFB454; --accent-soft:rgba(255,180,84,.14);
+    --good:#4ADE80; --good-soft:rgba(74,222,128,.16);
+    --warn:#FBBF24; --danger:#FB7185; --danger-soft:rgba(251,113,133,.14);
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, monospace;
+    --sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5;}
+  #app{min-height:100vh;display:flex;flex-direction:column;}
+  button{font-family:var(--sans);cursor:pointer;}
+  ::selection{background:var(--accent-soft);}
+  a{color:var(--accent);}
+
+  /* ---------- generic building blocks ---------- */
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:22px;}
+  .dim{color:var(--dim);}
+  .small{font-size:12.5px;}
+  .btn-primary,.btn-ghost,.btn-danger{
+    border-radius:8px;padding:10px 16px;font-size:14px;font-weight:600;border:1px solid transparent;
+    transition:filter .12s ease, background .12s ease; white-space:nowrap;
+  }
+  .btn-primary{background:var(--accent);color:#1A1204;}
+  .btn-primary:hover{filter:brightness(1.08);}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-ghost{background:transparent;border-color:var(--border);color:var(--text);}
+  .btn-ghost:hover{background:var(--panel2);}
+  .btn-danger{background:transparent;border-color:var(--danger);color:var(--danger);}
+  .btn-danger:hover{background:var(--danger-soft);}
+  .btn-sm{padding:6px 10px;font-size:12.5px;}
+  .full{width:100%;}
+  input:focus-visible, textarea:focus-visible, button:focus-visible, select:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px;
+  }
+  @media (prefers-reduced-motion: reduce){ *{animation:none!important; transition:none!important;} }
+
+  /* ---------- top bar / status strip (signature element) ---------- */
+  .topbar{background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;}
+  .topbar-row{display:flex;align-items:center;gap:14px;padding:10px 18px;}
+  .ttitle{font-weight:700;letter-spacing:.2px;}
+  .tstage{color:var(--dim);font-size:13.5px;flex:1;}
+  .tstage .dim{color:var(--dim2);margin:0 4px;}
+  .segstrip{display:flex;height:5px;width:100%;background:var(--panel2);}
+  .seg{height:100%;border-right:1px solid var(--bg);}
+  .seg.done{background:var(--good);opacity:.55;}
+  .seg.current{background:var(--accent);}
+  .seg.future{background:var(--panel2);}
+
+  /* ---------- layout ---------- */
+  .main{flex:1;display:flex;padding:26px 18px;justify-content:center;}
+  .stagewrap{display:flex;gap:18px;width:100%;max-width:1080px;align-items:flex-start;}
+  .stagewrap.centered{justify-content:center;}
+  .mainpanel{flex:1;min-width:0;}
+  .mainpanel.narrow{max-width:640px;margin:0 auto;}
+  .palette{width:230px;flex-shrink:0;}
+  @media (max-width:860px){ .stagewrap{flex-direction:column;} .palette{width:100%;} }
+
+  /* ---------- question header / clock ---------- */
+  .qhead{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:16px;}
+  .qnum{font-weight:700;color:var(--dim);font-size:13.5px;text-transform:uppercase;letter-spacing:.4px;}
+  .clockbox{text-align:right;min-width:120px;}
+  .timer{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:26px;color:var(--accent);display:block;}
+  .timer.low{color:var(--danger);animation:pulse 1s infinite;}
+  @keyframes pulse{50%{opacity:.35;}}
+  .fillbar{height:4px;background:var(--panel2);border-radius:2px;margin-top:6px;overflow:hidden;}
+  .fill{height:100%;background:var(--accent);width:0%;}
+  .timer.low ~ .fillbar .fill,.fillbar:has(+ .low) .fill{background:var(--danger);}
+
+  .qprompt{font-size:17px;margin-bottom:18px;white-space:pre-wrap;}
+  .qprompt.big{font-size:20px;text-align:center;margin:26px 0;}
+  .qinput{margin-bottom:18px;}
+  .option{display:flex;gap:10px;align-items:center;padding:12px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;}
+  .option:hover{border-color:var(--dim2);}
+  .option.selected{border-color:var(--accent);background:var(--accent-soft);}
+  .numinput,.wordinput{width:100%;padding:12px 14px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:15px;}
+  .wordinput{text-align:center;font-size:18px;max-width:340px;display:block;margin:0 auto;}
+  .qactions{display:flex;align-items:center;gap:10px;margin-top:14px;}
+  .spacer{flex:1;}
+
+  /* ---------- palette ---------- */
+  .palhead{font-weight:700;font-size:13px;color:var(--dim);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px;}
+  .palgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:14px;}
+  .tile{aspect-ratio:1;border-radius:6px;border:1px solid var(--border);background:var(--panel2);color:var(--dim);font-family:var(--mono);font-size:13px;}
+  .tile.current{outline:2px solid var(--accent);color:var(--text);}
+  .tile.visited{color:var(--text);}
+  .tile.answered{background:var(--good-soft);border-color:var(--good);color:var(--good);}
+  .tile.marked{border-color:var(--warn);box-shadow:inset 0 0 0 1px var(--warn);}
+  .legend{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--dim);margin-bottom:16px;}
+  .legend span{display:flex;align-items:center;gap:6px;}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--panel2);border:1px solid var(--border);}
+  .dot.answered{background:var(--good);border-color:var(--good);}
+  .dot.marked{border-color:var(--warn);}
+  .dot.visited{background:var(--dim2);}
+
+  /* ---------- passage / essay ---------- */
+  .passagebox{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:20px;font-size:16px;white-space:pre-wrap;line-height:1.7;margin-bottom:16px;}
+  .essaybox{width:100%;min-height:220px;resize:vertical;padding:14px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:15px;line-height:1.6;}
+  .wordbar{display:flex;justify-content:space-between;margin-top:8px;font-size:13px;}
+  .wc-bad{color:var(--danger);font-weight:700;}
+  .wc-ok{color:var(--warn);font-weight:700;}
+  .wc-good{color:var(--good);font-weight:700;}
+
+  /* ---------- coding ---------- */
+  .note{background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:8px 12px;font-size:12.5px;margin-bottom:14px;}
+  .codetoolbar{display:flex;align-items:center;gap:16px;margin-bottom:8px;flex-wrap:wrap;}
+  .codetoolbar select{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-family:var(--mono);}
+  .verify{font-size:12.5px;color:var(--dim);display:flex;gap:6px;align-items:center;}
+  .codeeditor{width:100%;min-height:220px;background:#0B0E13;color:#D7F5D0;font-family:var(--mono);font-size:13.5px;line-height:1.55;border:1px solid var(--border);border-radius:8px;padding:14px;tab-size:2;}
+  .console{background:#0B0E13;border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:12px;}
+  .consolehead{font-weight:700;font-size:12.5px;color:var(--dim);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;}
+  .testcase{margin-bottom:10px;padding-bottom:10px;border-bottom:1px dashed var(--border);}
+  .testcase:last-child{border-bottom:none;}
+  .tlabel{font-size:12px;color:var(--dim);margin-bottom:4px;}
+  .tio pre{display:inline;background:var(--panel2);padding:2px 6px;border-radius:4px;font-size:12.5px;}
+
+  /* ---------- setup / confirm / results ---------- */
+  .setupwrap{max-width:760px;margin:0 auto;padding:36px 18px;width:100%;}
+  h1.pagetitle{font-size:24px;margin:0 0 6px;}
+  p.lede{color:var(--dim);margin:0 0 24px;}
+  textarea.papertxt{width:100%;min-height:260px;background:#0B0E13;color:#D7F5D0;font-family:var(--mono);font-size:12.5px;border:1px solid var(--border);border-radius:8px;padding:14px;}
+  .errorlist{background:var(--danger-soft);border:1px solid var(--danger);border-radius:8px;padding:14px;margin-top:14px;color:#FFD9DE;}
+  .errorlist li{margin-bottom:4px;}
+  .banner{background:var(--accent-soft);border:1px solid var(--accent);border-radius:8px;padding:14px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+  details.schema{margin-top:20px;border:1px solid var(--border);border-radius:8px;padding:12px 16px;}
+  details.schema summary{cursor:pointer;font-weight:700;color:var(--dim);}
+  details.schema pre{overflow:auto;font-size:12px;background:#0B0E13;padding:12px;border-radius:6px;}
+  table.patterntbl{width:100%;border-collapse:collapse;margin-top:10px;font-size:13.5px;}
+  table.patterntbl th,table.patterntbl td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--border);}
+  table.patterntbl th{color:var(--dim);font-weight:600;font-size:12px;text-transform:uppercase;}
+  .attemptrow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:13.5px;}
+  .attemptrow .spacer{flex:1;}
+  .resultjson{width:100%;min-height:280px;background:#0B0E13;color:#D7F5D0;font-family:var(--mono);font-size:12px;border:1px solid var(--border);border-radius:8px;padding:14px;}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--panel2);border:1px solid var(--border);padding:10px 18px;border-radius:8px;font-size:13.5px;opacity:0;transition:opacity .18s ease, transform .18s ease;pointer-events:none;z-index:50;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+/* =========================================================================
+   NQT MOCK TEST RUNNER
+   A generic timed-test engine matching the official NQT pattern (section
+   timers, per-item timers, passage recall, essay, coding). Paste a question
+   paper JSON matching the schema shown in the Setup screen and run it.
+   ========================================================================= */
+
+/* ---------------------------- helpers ---------------------------- */
+function pad2(n){ return String(n).padStart(2,'0'); }
+function fmtTime(sec){
+  sec = Math.max(0, Math.round(sec));
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+  return h>0 ? (h+':'+pad2(m)+':'+pad2(s)) : (pad2(m)+':'+pad2(s));
+}
+function nowIso(){ return new Date().toISOString(); }
+function uid(prefix){ return prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8); }
+function countWords(s){ return (String(s||'').trim().match(/\S+/g)||[]).length; }
+function clamp(n,lo,hi){ return Math.max(lo, Math.min(hi,n)); }
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+  });
+}
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function(){ el.classList.remove('show'); }, 2200);
+}
+
+const LANG_META = {
+  c:{label:'C', version:'4.9.2'},
+  cpp:{label:'C++', version:'4.9.2'},
+  java:{label:'Java', version:'1.8.0_171'},
+  perl:{label:'PERL', version:'5.6.2'},
+  python:{label:'Python', version:'3.8.0'}
+};
+
+/* ---------------------------- storage (personal, never shared) ---------------------------- */
+async function storageGet(key) {
+    return localStorage.getItem(key);
+}
+
+async function storageSet(key, value) {
+    console.log(key, value);
+    localStorage.setItem(key, value);
+    return true;
+}
+
+async function storageDelete(key) {
+    localStorage.removeItem(key);
+}
+
+async function storageList(prefix) {
+    return Object.keys(localStorage)
+        .filter(k => k.startsWith(prefix));
+}
+
+async function storageGetJSON(key) {
+    const raw = await storageGet(key);
+    if (raw == null) return null;
+    try {
+        return JSON.parse(raw);
+    } catch {
+        return null;
+    }
+}
+
+let saveTimer=null;
+function scheduleSave(){
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(doSaveProgress, 800);
+}
+async function doSaveProgress(){
+  if(App.view!=='running') return;
+  const snapshot = {
+    paper: App.paper, responses: App.responses, stageIndex: App.stageIndex,
+    attemptId: App.attemptId, startedAt: App.startedAt
+  };
+  await storageSet('nqt_progress', JSON.stringify(snapshot));
+}
+
+/* ---------------------------- sample question paper ---------------------------- */
+const SAMPLE_PAPER = {
+  title: "NQT Mock Test (Sample structural demo)",
+  sections: [
+    { id:'numerical', name:'Numerical Ability', type:'block', durationSec:1500, items:[
+      {id:'n1',qtype:'mcq',prompt:'A sum of Rs 8000 is invested at 10 percent compound interest for 2 years. What is the compound interest earned?',options:['1600','1680','1640','1700']},
+      {id:'n2',qtype:'numeric',prompt:'The average of 5 numbers is 24. If one number is excluded, the average becomes 22. Find the excluded number (enter as a whole number).'}
+    ]},
+    { id:'reasoning', name:'Reasoning Ability', type:'block', durationSec:1500, items:[
+      {id:'r1',qtype:'mcq',prompt:'All cats are animals. Some animals are pets. Which conclusion definitely follows?',options:['All cats are pets','Some cats are pets','No cats are pets','None follows definitely']}
+    ]},
+    { id:'adv_quant', name:'Advanced Quantitative and Reasoning Ability', type:'block', durationSec:1500, items:[
+      {id:'aq1',qtype:'numeric',prompt:'Two vessels contain milk-water mixture in ratio 3:1 and 5:2. Equal volumes from each are mixed. Enter the numerator of the resulting milk:water ratio in lowest terms.'}
+    ]},
+    { id:'verbal', name:'Verbal Ability', type:'sequence', parts:[
+      { id:'sentence_completion', name:'Sentence Completion', type:'per_item_timer', perItemSec:25, items:[
+        {id:'sc1', prompt:'Despite the heavy rain, the match continued without ______.'},
+        {id:'sc2', prompt:'Her explanation was so ______ that nobody had further questions.'}
+      ]},
+      { id:'instr1', name:'Instruction', type:'instruction', durationSec:25, text:'Next up: Passage Recall. You will have 30 seconds to read a short passage, then 90 seconds to reconstruct it in your own words.' },
+      { id:'passage_recall', name:'Passage Recall', type:'passage_recall', readSec:30, writeSec:90, items:[
+        {id:'pr1', passage:'The city council announced a new cycling initiative last week. Over the next two years, forty kilometres of protected bike lanes will be added across the downtown core. Officials said the project aims to cut traffic congestion and reduce emissions, with early funding coming from a federal green transport grant.'}
+      ]},
+      { id:'instr2', name:'Instruction', type:'instruction', durationSec:15, text:'Next up: Email Writing. Read the situation carefully and respond to every issue raised.' },
+      { id:'email_writing', name:'Email Writing', type:'essay', durationSec:540, minWords:100, prompt:'You ordered a laptop online two weeks ago. It arrived with a cracked screen and the wrong charger. Write an email to customer support describing both issues and requesting a resolution.' }
+    ]},
+    { id:'coding_easy', name:'Advanced Coding Easy', type:'coding', durationSec:2100, items:[
+      { id:'ce1', title:'Sum of Digits', statement:'Read an integer N and print the sum of its digits.', languages:['c','cpp','java','perl','python'],
+        starterCode:{python:'n = int(input())\n# your code here\n'}, publicTests:[{input:'123',output:'6'},{input:'9040',output:'13'}] }
+    ]},
+    { id:'break1', name:'Break', type:'break', durationSec:60 },
+    { id:'coding_medium', name:'Advanced Coding Medium', type:'coding', durationSec:3300, items:[
+      { id:'cm1', title:'Longest Substring Without Repeating Characters', statement:'Given a string S, print the length of the longest substring without repeating characters.', languages:['c','cpp','java','perl','python'],
+        starterCode:{python:'s = input()\n# your code here\n'}, publicTests:[{input:'abcabcbb',output:'3'},{input:'bbbbb',output:'1'}] }
+    ]}
+  ]
+};
+
+/* ---------------------------- validation ---------------------------- */
+function validatePaper(paper){
+  const errors = [];
+  if(typeof paper!=='object'||paper===null){ return {ok:false, errors:['Root value must be a JSON object.']}; }
+  if(!Array.isArray(paper.sections)||paper.sections.length===0){ errors.push('paper.sections must be a non-empty array.'); return {ok:false, errors}; }
+  const topTypes = ['block','sequence','coding','break'];
+  paper.sections.forEach(function(sec, si){
+    const p = 'sections['+si+']'+(sec&&sec.id?(' id="'+sec.id+'"'):'');
+    if(!sec||typeof sec!=='object'){ errors.push(p+': must be an object.'); return; }
+    if(!sec.id) errors.push(p+': missing "id".');
+    if(!sec.type||topTypes.indexOf(sec.type)===-1) errors.push(p+': "type" must be one of '+topTypes.join(', ')+'.');
+    if(sec.type==='sequence'){
+      if(!Array.isArray(sec.parts)||sec.parts.length===0){ errors.push(p+': type "sequence" requires a non-empty "parts" array.'); return; }
+      const leafTypes = ['per_item_timer','instruction','passage_recall','essay'];
+      sec.parts.forEach(function(part, pi){
+        const pp = p+'.parts['+pi+']'+(part&&part.id?(' id="'+part.id+'"'):'');
+        if(!part||typeof part!=='object'){ errors.push(pp+': must be an object.'); return; }
+        if(!part.id) errors.push(pp+': missing "id".');
+        if(!part.type||leafTypes.indexOf(part.type)===-1){ errors.push(pp+': "type" must be one of '+leafTypes.join(', ')+'.'); return; }
+        validateLeaf(part, pp, errors);
+      });
+    } else {
+      validateLeaf(sec, p, errors);
+    }
+  });
+  return {ok: errors.length===0, errors};
+}
+function validateLeaf(node, path, errors){
+  switch(node.type){
+    case 'block':
+      if(typeof node.durationSec!=='number'||node.durationSec<=0) errors.push(path+': "durationSec" must be a positive number.');
+      if(!Array.isArray(node.items)||node.items.length===0){ errors.push(path+': "items" must be a non-empty array.'); break; }
+      node.items.forEach(function(it,ii){
+        const ip = path+'.items['+ii+']';
+        if(!it.id) errors.push(ip+': missing "id".');
+        if(!it.prompt) errors.push(ip+': missing "prompt".');
+        if(it.qtype!=='mcq'&&it.qtype!=='numeric') errors.push(ip+': "qtype" must be "mcq" or "numeric".');
+        if(it.qtype==='mcq'&&(!Array.isArray(it.options)||it.options.length<2)) errors.push(ip+': mcq items need an "options" array with 2+ entries.');
+      });
+      break;
+    case 'per_item_timer':
+      if(typeof node.perItemSec!=='number'||node.perItemSec<=0) errors.push(path+': "perItemSec" must be a positive number.');
+      if(!Array.isArray(node.items)||node.items.length===0) errors.push(path+': "items" must be a non-empty array.');
+      break;
+    case 'instruction':
+      if(typeof node.durationSec!=='number'||node.durationSec<=0) errors.push(path+': "durationSec" must be a positive number.');
+      break;
+    case 'passage_recall':
+      if(typeof node.readSec!=='number'||node.readSec<=0) errors.push(path+': "readSec" must be a positive number.');
+      if(typeof node.writeSec!=='number'||node.writeSec<=0) errors.push(path+': "writeSec" must be a positive number.');
+      if(!Array.isArray(node.items)||node.items.length===0){ errors.push(path+': "items" must be a non-empty array.'); break; }
+      node.items.forEach(function(it,ii){ if(!it.passage) errors.push(path+'.items['+ii+']: missing "passage".'); });
+      break;
+    case 'essay':
+      if(typeof node.durationSec!=='number'||node.durationSec<=0) errors.push(path+': "durationSec" must be a positive number.');
+      if(typeof node.minWords!=='number'||node.minWords<0) errors.push(path+': "minWords" must be a non-negative number.');
+      if(!node.prompt) errors.push(path+': missing "prompt".');
+      break;
+    case 'coding':
+      if(typeof node.durationSec!=='number'||node.durationSec<=0) errors.push(path+': "durationSec" must be a positive number.');
+      if(!Array.isArray(node.items)||node.items.length===0){ errors.push(path+': "items" must be a non-empty array.'); break; }
+      node.items.forEach(function(it,ii){
+        const ip = path+'.items['+ii+']';
+        if(!it.id) errors.push(ip+': missing "id".');
+        if(!it.statement) errors.push(ip+': missing "statement".');
+      });
+      break;
+    case 'break':
+      if(typeof node.durationSec!=='number'||node.durationSec<=0) errors.push(path+': "durationSec" must be a positive number.');
+      break;
+  }
+}
+
+/* ---------------------------- flatten sections into linear stages ---------------------------- */
+function flattenSections(paper){
+  const stages = [];
+  paper.sections.forEach(function(sec){
+    if(sec.type==='sequence'){
+      sec.parts.forEach(function(part){
+        stages.push(Object.assign({}, part, {sectionId:sec.id, sectionName:sec.name}));
+      });
+    } else {
+      stages.push(Object.assign({}, sec, {sectionId:sec.id, sectionName:sec.name}));
+    }
+  });
+  return stages;
+}
+function stageDuration(st){
+  if(st.type==='per_item_timer') return st.perItemSec*st.items.length;
+  if(st.type==='passage_recall') return (st.readSec+st.writeSec)*st.items.length;
+  return st.durationSec||0;
+}
+function labelForType(t){
+  return ({block:'Section', per_item_timer:'Sentence Completion', instruction:'Instruction', passage_recall:'Passage Recall', essay:'Essay', coding:'Coding', break:'Break'})[t]||t;
+}
+
+/* ---------------------------- app state ---------------------------- */
+const App = {
+  view:'setup', paper:null, stages:[], stageIndex:0, responses:[], ui:{},
+  timer:null, intervalHandle:null, attemptId:null, startedAt:null, finishedAt:null,
+  lastResults:null, savedProgress:null, resultsIndex:[], resultCache:{}, viewingResultId:null
+};
+window.App = App; // exposed for easy inspection via devtools console
+
+/* ---------------------------- response init ---------------------------- */
+function initResponseForStage(stage){
+  switch(stage.type){
+    case 'block':
+      return { type:'block', sectionId:stage.sectionId, name:stage.name, allottedSec:stage.durationSec, timeUsedSec:0, timedOut:false,
+        items: stage.items.map(function(it){ return {id:it.id, qtype:it.qtype, prompt:it.prompt, response:null, visited:false, marked:false, timeSpentSec:0}; }) };
+    case 'per_item_timer':
+      return { type:'per_item_timer', sectionId:stage.sectionId, name:stage.name, allottedPerItemSec:stage.perItemSec,
+        items: stage.items.map(function(it){ return {id:it.id, prompt:it.prompt, response:'', timedOut:false, timeSpentSec:0}; }) };
+    case 'instruction':
+      return { type:'instruction', sectionId:stage.sectionId, name:stage.name, allottedSec:stage.durationSec };
+    case 'passage_recall':
+      return { type:'passage_recall', sectionId:stage.sectionId, name:stage.name, readSec:stage.readSec, writeSec:stage.writeSec,
+        items: stage.items.map(function(it){ return {id:it.id, passage:it.passage, response:'', readTimeUsedSec:0, writeTimeUsedSec:0}; }) };
+    case 'essay':
+      return { type:'essay', sectionId:stage.sectionId, name:stage.name, allottedSec:stage.durationSec, minWords:stage.minWords, prompt:stage.prompt, response:'', wordCount:0, timedOut:false };
+    case 'coding':
+      return { type:'coding', sectionId:stage.sectionId, name:stage.name, allottedSec:stage.durationSec, timedOut:false,
+        items: stage.items.map(function(it){
+          const langs = (it.languages&&it.languages.length)? it.languages : ['c','cpp','java','perl','python'];
+          return {id:it.id, title:it.title, language:langs[0], codeByLang:{}, selfVerified:false};
+        }) };
+    case 'break':
+      return { type:'break', name:stage.name||'Break', allottedSec:stage.durationSec };
+  }
+}
+
+/* ---------------------------- timer engine ---------------------------- */
+function startTimer(seconds, onExpire){
+  App.timer = { remaining: seconds, total: seconds, onExpire: onExpire };
+}
+function globalTick(){
+  if(!App.timer) return;
+  App.timer.remaining--;
+  updateClockDOM();
+  if(App.timer.remaining<=0){
+    const fn = App.timer.onExpire; App.timer = null;
+    if(fn) fn();
+  }
+}
+function updateClockDOM(){
+  if(!App.timer) return;
+  const el = document.getElementById('timerDisplay');
+  const fill = document.getElementById('stageProgressFill');
+  if(el){
+    el.textContent = fmtTime(App.timer.remaining);
+    const lowThresh = Math.max(10, App.timer.total*0.1);
+    el.classList.toggle('low', App.timer.remaining<=lowThresh);
+  }
+  if(fill){ fill.style.width = clamp(100*(1-App.timer.remaining/App.timer.total),0,100)+'%'; }
+}
+function ensureInterval(){
+  if(App.intervalHandle) clearInterval(App.intervalHandle);
+  App.intervalHandle = setInterval(globalTick, 1000);
+}
+
+/* ---------------------------- stage transitions ---------------------------- */
+function enterStage(i){
+  App.stageIndex = i;
+  if(i>=App.stages.length){ finishTest(); return; }
+  const stage = App.stages[i];
+  if(!App.responses[i]) App.responses[i] = initResponseForStage(stage);
+  App.ui = {};
+  switch(stage.type){
+    case 'block':
+      App.ui.currentItem = 0; App.ui.itemEnteredAt = Date.now();
+      App.responses[i].items[0].visited = true;
+      startTimer(stage.durationSec, function(){ onBlockTimeout(i); });
+      break;
+    case 'per_item_timer':
+      App.ui.currentItem = 0;
+      startTimer(stage.perItemSec, function(){ onPerItemTimeout(i); });
+      break;
+    case 'instruction':
+      startTimer(stage.durationSec, function(){ advanceStage(); });
+      break;
+    case 'passage_recall':
+      App.ui.currentItem = 0; App.ui.phase = 'reading';
+      startTimer(stage.readSec, function(){ onPassagePhaseTimeout(i); });
+      break;
+    case 'essay':
+      startTimer(stage.durationSec, function(){ onEssayTimeout(i); });
+      break;
+    case 'coding':
+      App.ui.currentItem = 0;
+      startTimer(stage.durationSec, function(){ onCodingTimeout(i); });
+      break;
+    case 'break':
+      startTimer(stage.durationSec, function(){ advanceStage(); });
+      break;
+  }
+  scheduleSave();
+  render();
+}
+function advanceStage(){ enterStage(App.stageIndex+1); }
+
+function flushBlockItemTime(stageIdx){
+  const resp = App.responses[stageIdx];
+  if(App.ui.itemEnteredAt){
+    const elapsed = (Date.now()-App.ui.itemEnteredAt)/1000;
+    resp.items[App.ui.currentItem].timeSpentSec = (resp.items[App.ui.currentItem].timeSpentSec||0) + elapsed;
+  }
+}
+function onBlockTimeout(stageIdx){
+  flushBlockItemTime(stageIdx);
+  App.responses[stageIdx].timedOut = true;
+  App.responses[stageIdx].timeUsedSec = App.stages[stageIdx].durationSec;
+  advanceStage();
+}
+function onEssayTimeout(stageIdx){
+  App.responses[stageIdx].timedOut = true;
+  App.responses[stageIdx].timeUsedSec = App.stages[stageIdx].durationSec;
+  advanceStage();
+}
+function onCodingTimeout(stageIdx){
+  App.responses[stageIdx].timedOut = true;
+  App.responses[stageIdx].timeUsedSec = App.stages[stageIdx].durationSec;
+  advanceStage();
+}
+function onPerItemTimeout(stageIdx){
+  const resp = App.responses[stageIdx];
+  resp.items[App.ui.currentItem].timedOut = true;
+  resp.items[App.ui.currentItem].timeSpentSec = App.stages[stageIdx].perItemSec;
+  advancePerItemTimerItem(stageIdx);
+}
+function advancePerItemTimerItem(stageIdx){
+  const stage = App.stages[stageIdx];
+  const next = App.ui.currentItem+1;
+  if(next<stage.items.length){
+    App.ui.currentItem = next;
+    startTimer(stage.perItemSec, function(){ onPerItemTimeout(stageIdx); });
+    scheduleSave(); render();
+  } else {
+    advanceStage();
+  }
+}
+function onPassagePhaseTimeout(stageIdx){
+  const stage = App.stages[stageIdx]; const resp = App.responses[stageIdx];
+  const idx = App.ui.currentItem;
+  if(App.ui.phase==='reading'){
+    resp.items[idx].readTimeUsedSec = stage.readSec;
+    App.ui.phase='writing';
+    startTimer(stage.writeSec, function(){ onPassagePhaseTimeout(stageIdx); });
+    scheduleSave(); render();
+  } else {
+    resp.items[idx].writeTimeUsedSec = stage.writeSec;
+    finishPassageItem(stageIdx);
+  }
+}
+function finishPassageItem(stageIdx){
+  const stage = App.stages[stageIdx];
+  const next = App.ui.currentItem+1;
+  if(next<stage.items.length){
+    App.ui.currentItem = next; App.ui.phase='reading';
+    startTimer(stage.readSec, function(){ onPassagePhaseTimeout(stageIdx); });
+    scheduleSave(); render();
+  } else {
+    advanceStage();
+  }
+}
+
+/* ---------------------------- results ---------------------------- */
+function buildResultsObject(){
+  const totalPlanned = App.stages.reduce(function(s,st){ return s+stageDuration(st); },0);
+  const startMs = App.startedAt? new Date(App.startedAt).getTime() : Date.now();
+  const endMs = new Date(App.finishedAt).getTime();
+  return {
+    meta:{
+      title: App.paper.title||'Mock Test', attemptId: App.attemptId,
+      startedAt: App.startedAt, finishedAt: App.finishedAt,
+      totalPlannedSec: totalPlanned, totalActualSec: Math.round((endMs-startMs)/1000)
+    },
+    stages: App.stages.map(function(st,i){
+      const r = App.responses[i] || initResponseForStage(st);
+      console.log(r);
+      return Object.assign({ stageId: st.id, sectionId: st.sectionId, sectionName: st.sectionName, type: st.type, name: st.name }, r);
+    })
+  };
+}
+async function persistFinalResults(results){
+  const key = 'nqt_result_'+App.attemptId;
+  await storageSet(key, JSON.stringify(results));
+  const idx = (await storageGetJSON('nqt_results_index')) || [];
+  idx.unshift({ id: App.attemptId, title: results.meta.title, finishedAt: results.meta.finishedAt });
+  await storageSet('nqt_results_index', JSON.stringify(idx));
+  App.resultsIndex = idx;
+  await storageDelete('nqt_progress');
+}
+function finishTest(){
+  if(App.intervalHandle) clearInterval(App.intervalHandle);
+  App.timer = null; App.finishedAt = nowIso(); App.view='results';
+  const results = buildResultsObject();
+  App.lastResults = results;
+  persistFinalResults(results);
+  render();
+}
+
+/* ---------------------------- App action handlers (exposed on window) ---------------------------- */
+App.exitEarly = function(){
+  if(!confirm('End the test now and jump to your results? Anything left unanswered stays unanswered.')) return;
+  flushBlockItemTime(App.stageIndex);
+  finishTest();
+};
+App.goToItem = function(newIdx){
+  const stage = App.stages[App.stageIndex]; const resp = App.responses[App.stageIndex];
+  flushBlockItemTime(App.stageIndex);
+  App.ui.currentItem = newIdx; resp.items[newIdx].visited = true; App.ui.itemEnteredAt = Date.now();
+  scheduleSave(); render();
+};
+App.setMcqAnswer = function(oi){
+  const resp = App.responses[App.stageIndex]; const idx = App.ui.currentItem;
+  resp.items[idx].response = oi; resp.items[idx].visited = true;
+  scheduleSave(); render();
+};
+App.setNumericAnswer = function(val){
+  const resp = App.responses[App.stageIndex]; const idx = App.ui.currentItem;
+  resp.items[idx].response = val; resp.items[idx].visited = true;
+  const tiles = document.querySelectorAll('.palgrid .tile');
+  if(tiles[idx]) tiles[idx].classList.toggle('answered', val!=null && val!=='');
+  scheduleSave();
+};
+App.toggleMark = function(){
+  const resp = App.responses[App.stageIndex]; const idx = App.ui.currentItem;
+  resp.items[idx].marked = !resp.items[idx].marked; render();
+};
+App.clearAnswer = function(){
+  const resp = App.responses[App.stageIndex]; const idx = App.ui.currentItem;
+  resp.items[idx].response = null; render();
+};
+App.confirmSubmitSection = function(){
+  const stage = App.stages[App.stageIndex]; const resp = App.responses[App.stageIndex];
+  if(resp.items){
+    const unanswered = resp.items.filter(function(it){ return it.response===null||it.response===''||it.response===undefined; }).length;
+    if(unanswered>0 && !confirm('You have '+unanswered+' unanswered question(s) in this section. Submit anyway?')) return;
+  }
+  flushBlockItemTime(App.stageIndex);
+  if(App.timer){ resp.timeUsedSec = stage.durationSec - App.timer.remaining; App.timer=null; }
+  advanceStage();
+};
+App.nextSC = function(){
+  const stage = App.stages[App.stageIndex]; const resp = App.responses[App.stageIndex]; const idx = App.ui.currentItem;
+  if(App.timer){ resp.items[idx].timeSpentSec = stage.perItemSec - App.timer.remaining; App.timer=null; }
+  advancePerItemTimerItem(App.stageIndex);
+};
+App.onSCInput = function(val){
+  const resp = App.responses[App.stageIndex]; resp.items[App.ui.currentItem].response = val; scheduleSave();
+};
+App.skipInstruction = function(){ App.timer=null; advanceStage(); };
+App.skipBreak = function(){ App.timer=null; advanceStage(); };
+App.skipReadEarly = function(){
+  const stage = App.stages[App.stageIndex]; const resp = App.responses[App.stageIndex]; const idx = App.ui.currentItem;
+  if(App.timer){ resp.items[idx].readTimeUsedSec = stage.readSec - App.timer.remaining; }
+  App.ui.phase='writing';
+  startTimer(stage.writeSec, function(){ onPassagePhaseTimeout(App.stageIndex); });
+  scheduleSave(); render();
+};
+App.onPassageInput = function(val){
+  const resp = App.responses[App.stageIndex]; resp.items[App.ui.currentItem].response = val; scheduleSave();
+};
+App.submitPassageEarly = function(){
+  const stage = App.stages[App.stageIndex]; const resp = App.responses[App.stageIndex]; const idx = App.ui.currentItem;
+  if(App.timer){ resp.items[idx].writeTimeUsedSec = stage.writeSec - App.timer.remaining; App.timer=null; }
+  finishPassageItem(App.stageIndex);
+};
+function wcClass(n,min){ if(n<min) return 'wc-bad'; if(n<min+30) return 'wc-ok'; return 'wc-good'; }
+App.onEssayInput = function(val){
+  const resp = App.responses[App.stageIndex];
+  resp.response = val; resp.wordCount = countWords(val);
+  const el = document.getElementById('wordCount');
+  if(el){ el.textContent = resp.wordCount+' words'; el.className = wcClass(resp.wordCount, App.stages[App.stageIndex].minWords); }
+  scheduleSave();
+};
+App.setLanguage = function(l){
+  const resp = App.responses[App.stageIndex]; resp.items[App.ui.currentItem].language = l; render();
+};
+App.setCode = function(val){
+  const resp = App.responses[App.stageIndex]; const it = resp.items[App.ui.currentItem];
+  it.codeByLang[it.language] = val; scheduleSave();
+};
+App.codeTab = function(ev, ta){
+  if(ev.key==='Tab'){
+    ev.preventDefault();
+    const start = ta.selectionStart, end = ta.selectionEnd;
+    ta.value = ta.value.slice(0,start)+'  '+ta.value.slice(end);
+    ta.selectionStart = ta.selectionEnd = start+2;
+    App.setCode(ta.value);
+  }
+};
+App.setSelfVerified = function(v){
+  const resp = App.responses[App.stageIndex]; resp.items[App.ui.currentItem].selfVerified = v; scheduleSave();
+};
+
+/* setup / confirm / lifecycle */
+App.loadSampleIntoTextarea = function(){
+  const ta = document.getElementById('paperInput');
+  if(ta) ta.value = JSON.stringify(SAMPLE_PAPER, null, 2);
+};
+App.loadPaperFromTextarea = function(){
+  const ta = document.getElementById('paperInput');
+  let parsed;
+  try{ parsed = JSON.parse(ta.value); }
+  catch(e){ App.parseError = 'Could not parse JSON: '+e.message; render(); return; }
+  App.parseError = null;
+  const v = validatePaper(parsed);
+  if(!v.ok){ App.validationErrors = v.errors; render(); return; }
+  App.validationErrors = null;
+  App.paper = parsed; App.stages = flattenSections(parsed);
+  App.view = 'confirm'; render();
+};
+App.backToSetup = function(){ App.view='setup'; render(); };
+App.beginTest = function(){
+  App.attemptId = uid('attempt'); App.startedAt = nowIso(); App.finishedAt=null;
+  App.responses = []; ensureInterval(); App.view='running'; enterStage(0);
+};
+App.resumeProgress = function(){
+  const snap = App.savedProgress; if(!snap) return;
+  App.paper = snap.paper; App.stages = flattenSections(snap.paper);
+  App.responses = snap.responses; App.attemptId = snap.attemptId; App.startedAt = snap.startedAt;
+  ensureInterval(); App.view='running'; enterStage(snap.stageIndex);
+};
+App.discardProgress = async function(){
+  if(!confirm('Discard your saved in-progress attempt? This cannot be undone.')) return;
+  await storageDelete('nqt_progress'); App.savedProgress = null; render();
+};
+App.startNewAttempt = function(){
+  App.responses = []; App.attemptId = uid('attempt'); App.startedAt = nowIso(); App.finishedAt=null;
+  ensureInterval(); App.view='running'; enterStage(0);
+};
+App.loadDifferentPaper = function(){ App.paper=null; App.stages=[]; App.view='setup'; render(); };
+
+/* results screen actions */
+App.copyResultsJson = function(){
+  navigator.clipboard.writeText(JSON.stringify(App.lastResults,null,2))
+    .then(function(){ toast('Copied full results JSON to clipboard'); })
+    .catch(function(){ toast('Copy failed — select the text box and copy manually'); });
+};
+App.downloadResultsJson = function(){
+  const data = JSON.stringify(App.lastResults, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='nqt_attempt_'+App.attemptId+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+};
+
+/* past attempts */
+App.viewPastResult = async function(id){
+  if(!App.resultCache[id]){
+    const data = await storageGetJSON('nqt_result_'+id);
+    App.resultCache[id] = data;
+  }
+  App.viewingResultId = (App.viewingResultId===id) ? null : id;
+  render();
+};
+App.deletePastResult = async function(id){
+  if(!confirm('Delete this saved attempt permanently?')) return;
+  await storageDelete('nqt_result_'+id);
+  App.resultsIndex = App.resultsIndex.filter(function(r){ return r.id!==id; });
+  await storageSet('nqt_results_index', JSON.stringify(App.resultsIndex));
+  delete App.resultCache[id];
+  render();
+};
+App.copyPastResult = function(id){
+  const data = App.resultCache[id];
+  if(!data) return;
+  navigator.clipboard.writeText(JSON.stringify(data,null,2))
+    .then(function(){ toast('Copied to clipboard'); })
+    .catch(function(){ toast('Copy failed'); });
+};
+
+/* =========================================================================
+   RENDERING
+   ========================================================================= */
+function renderTopBar(){
+  const totalSec = App.stages.reduce(function(s,st){ return s+stageDuration(st); },0);
+  const segs = App.stages.map(function(st,i){
+    const dur = stageDuration(st);
+    const widthPct = (dur/totalSec*100).toFixed(3);
+    let state='future';
+    if(i<App.stageIndex) state='done'; else if(i===App.stageIndex) state='current';
+    return '<div class="seg '+state+'" style="width:'+widthPct+'%" title="'+escapeHtml(st.sectionName+' – '+(st.name||labelForType(st.type)))+'"></div>';
+  }).join('');
+  const cur = App.stages[App.stageIndex];
+  return '<div class="topbar">'
+    +'<div class="topbar-row">'
+      +'<div class="ttitle">'+escapeHtml(App.paper.title||'Mock Test')+'</div>'
+      +'<div class="tstage">'+escapeHtml(cur.sectionName)+'<span class="dim">&rsaquo;</span>'+escapeHtml(cur.name||labelForType(cur.type))+'</div>'
+      +'<button class="btn-ghost btn-sm" onclick="App.exitEarly()">Exit &amp; finish now</button>'
+    +'</div>'
+    +'<div class="segstrip">'+segs+'</div>'
+  +'</div>';
+}
+
+function renderBlock(stage,resp){
+  const idx = App.ui.currentItem; const item = stage.items[idx]; const iresp = resp.items[idx];
+  const palette = stage.items.map(function(it,i){
+    const r = resp.items[i]; let cls='tile';
+    if(i===idx) cls+=' current';
+    if(r.response!==null && r.response!=='') cls+=' answered'; else if(r.visited) cls+=' visited';
+    if(r.marked) cls+=' marked';
+    return '<button class="'+cls+'" onclick="App.goToItem('+i+')">'+(i+1)+'</button>';
+  }).join('');
+  let inputHtml;
+  if(item.qtype==='mcq'){
+    inputHtml = item.options.map(function(opt,oi){
+    //    console.log( opt , oi, iresp)
+      const sel = String(iresp.response)===String(oi);
+      return '<label class="option'+(sel?' selected':'')+'">'
+        +'<input type="radio" name="mcqopt" '+(sel?'checked':'')+' onchange="App.setMcqAnswer('+oi+')">'
+        +'<span>'+escapeHtml(opt)+'</span></label>';
+    }).join('');
+  } else {
+    inputHtml = '<input type="text" inputmode="numeric" class="numinput" placeholder="Whole number only — no units or symbols" '
+      +'value="'+escapeHtml(iresp.response||'')+'" oninput="App.setNumericAnswer(this.value)">';
+  }
+  return '<div class="stagewrap">'
+    +'<div class="mainpanel card">'
+      +'<div class="qhead"><span class="qnum">Q'+(idx+1)+' / '+stage.items.length+'</span>'
+      +'<div class="clockbox"><span id="timerDisplay" class="timer"></span><div class="fillbar"><div id="stageProgressFill" class="fill"></div></div></div></div>'
+      +'<div class="qprompt">'+escapeHtml(item.prompt)+'</div>'
+      +'<div class="qinput">'+inputHtml+'</div>'
+      +'<div class="qactions">'
+        +'<button class="btn-ghost" onclick="App.toggleMark()">'+(iresp.marked?'Unmark':'Mark for review')+'</button>'
+        +'<button class="btn-ghost" onclick="App.clearAnswer()">Clear response</button>'
+        +'<div class="spacer"></div>'
+        +'<button class="btn-ghost" '+(idx===0?'disabled':'')+' onclick="App.goToItem('+(idx-1)+')">Prev</button>'
+        +'<button class="btn-primary" '+(idx===stage.items.length-1?'disabled':'')+' onclick="App.goToItem('+Math.min(idx+1,stage.items.length-1)+')">Next</button>'
+      +'</div>'
+    +'</div>'
+    +'<div class="palette card">'
+      +'<div class="palhead">Questions</div>'
+      +'<div class="palgrid">'+palette+'</div>'
+      +'<div class="legend"><span><i class="dot answered"></i>Answered</span><span><i class="dot marked"></i>Marked</span><span><i class="dot visited"></i>Visited</span></div>'
+      +'<button class="btn-primary full" onclick="App.confirmSubmitSection()">Submit section</button>'
+    +'</div>'
+  +'</div>';
+}
+
+function renderPerItemTimer(stage,resp){
+  const idx = App.ui.currentItem; const item = stage.items[idx]; const iresp = resp.items[idx];
+  return '<div class="stagewrap centered"><div class="mainpanel card narrow">'
+    +'<div class="qhead"><span class="qnum">'+escapeHtml(stage.name||'Sentence Completion')+' — '+(idx+1)+'/'+stage.items.length+'</span>'
+    +'<div class="clockbox"><span id="timerDisplay" class="timer"></span><div class="fillbar"><div id="stageProgressFill" class="fill"></div></div></div></div>'
+    +'<div class="qprompt big">'+escapeHtml(item.prompt)+'</div>'
+    +'<input id="oneWordInput" type="text" class="wordinput" autocomplete="off" placeholder="Type one word" value="'+escapeHtml(iresp.response||'')+'" oninput="App.onSCInput(this.value)">'
+    +'<div class="qactions"><div class="spacer"></div><button class="btn-primary" onclick="App.nextSC()">Next</button></div>'
+  +'</div></div>';
+}
+
+function renderInstruction(stage){
+  return '<div class="stagewrap centered"><div class="mainpanel card narrow">'
+    +'<div class="qhead"><span class="qnum">'+escapeHtml(stage.sectionName)+'</span>'
+    +'<div class="clockbox"><span id="timerDisplay" class="timer"></span><div class="fillbar"><div id="stageProgressFill" class="fill"></div></div></div></div>'
+    +'<div class="qprompt">'+escapeHtml(stage.text||'Get ready for the next part.')+'</div>'
+    +'<div class="qactions"><div class="spacer"></div><button class="btn-primary" onclick="App.skipInstruction()">Continue</button></div>'
+  +'</div></div>';
+}
+
+function renderPassageRecall(stage,resp){
+  const idx = App.ui.currentItem; const item = resp.items[idx];
+  if(App.ui.phase==='reading'){
+    return '<div class="stagewrap centered"><div class="mainpanel card">'
+      +'<div class="qhead"><span class="qnum">Passage Recall — Reading ('+(idx+1)+'/'+stage.items.length+')</span>'
+      +'<div class="clockbox"><span id="timerDisplay" class="timer"></span><div class="fillbar"><div id="stageProgressFill" class="fill"></div></div></div></div>'
+      +'<div class="passagebox">'+escapeHtml(item.passage)+'</div>'
+      +'<div class="qactions"><div class="spacer"></div><button class="btn-ghost" onclick="App.skipReadEarly()">Start writing now</button></div>'
+    +'</div></div>';
+  }
+  return '<div class="stagewrap centered"><div class="mainpanel card">'
+    +'<div class="qhead"><span class="qnum">Passage Recall — Writing ('+(idx+1)+'/'+stage.items.length+')</span>'
+    +'<div class="clockbox"><span id="timerDisplay" class="timer"></span><div class="fillbar"><div id="stageProgressFill" class="fill"></div></div></div></div>'
+    +'<div class="dim small" style="margin-bottom:10px;">Reconstruct the passage in your own words — scored for clear, accurate content, not exact wording.</div>'
+    +'<textarea id="passageWriteBox" class="essaybox" oninput="App.onPassageInput(this.value)" placeholder="Write what you remember...">'+escapeHtml(item.response)+'</textarea>'
+    +'<div class="qactions"><div class="spacer"></div><button class="btn-primary" onclick="App.submitPassageEarly()">Submit &amp; continue</button></div>'
+  +'</div></div>';
+}
+
+function renderEssay(stage,resp){
+  return '<div class="stagewrap centered"><div class="mainpanel card">'
+    +'<div class="qhead"><span class="qnum">Email Writing</span>'
+    +'<div class="clockbox"><span id="timerDisplay" class="timer"></span><div class="fillbar"><div id="stageProgressFill" class="fill"></div></div></div></div>'
+    +'<div class="qprompt">'+escapeHtml(stage.prompt)+'</div>'
+    +'<textarea id="essayBox" class="essaybox" oninput="App.onEssayInput(this.value)" placeholder="Write your email here...">'+escapeHtml(resp.response)+'</textarea>'
+    +'<div class="wordbar"><span id="wordCount" class="'+wcClass(resp.wordCount,stage.minWords)+'">'+resp.wordCount+' words</span><span class="dim">Minimum '+stage.minWords+' words</span></div>'
+    +'<div class="qactions"><div class="spacer"></div><button class="btn-primary" onclick="App.confirmSubmitSection()">Submit section</button></div>'
+  +'</div></div>';
+}
+
+function renderCoding(stage,resp){
+  const idx = App.ui.currentItem; const item = stage.items[idx]; const iresp = resp.items[idx];
+  const allowed = (item.languages&&item.languages.length)? item.languages : ['c','cpp','java','perl','python'];
+  const lang = iresp.language || allowed[0];
+  const code = iresp.codeByLang[lang]!==undefined ? iresp.codeByLang[lang] : ((item.starterCode&&item.starterCode[lang])||'');
+  const langOptions = allowed.map(function(l){ return '<option value="'+l+'" '+(l===lang?'selected':'')+'>'+LANG_META[l].label+' ('+LANG_META[l].version+')</option>'; }).join('');
+  const testsHtml = (item.publicTests&&item.publicTests.length) ? item.publicTests.map(function(t,ti){
+    return '<div class="testcase"><div class="tlabel">Test '+(ti+1)+'</div><div class="tio"><b>Input:</b> <pre>'+escapeHtml(t.input)+'</pre> &nbsp; <b>Expected output:</b> <pre>'+escapeHtml(t.output)+'</pre></div></div>';
+  }).join('') : '<div class="dim small">No public test cases provided for this question.</div>';
+  return '<div class="stagewrap coding"><div class="mainpanel card">'
+    +'<div class="qhead"><span class="qnum">'+escapeHtml(item.title||('Coding item '+(idx+1)))+'</span>'
+    +'<div class="clockbox"><span id="timerDisplay" class="timer"></span><div class="fillbar"><div id="stageProgressFill" class="fill"></div></div></div></div>'
+    +'<div class="qprompt">'+escapeHtml(item.statement)+'</div>'
+    +'<div class="note">Reminder from the exam pattern: no hardcoded input values — your code is tested against hidden inputs.</div>'
+    +'<div class="codetoolbar"><select onchange="App.setLanguage(this.value)">'+langOptions+'</select>'
+      +'<label class="verify"><input type="checkbox" '+(iresp.selfVerified?'checked':'')+' onchange="App.setSelfVerified(this.checked)"> I have verified this compiles and passes the public tests elsewhere</label></div>'
+    +'<textarea id="codeEditor" class="codeeditor" spellcheck="false" oninput="App.setCode(this.value)" onkeydown="App.codeTab(event,this)">'+escapeHtml(code)+'</textarea>'
+    +'<div class="console"><div class="consolehead">Public test cases</div>'+testsHtml
+      +'<div class="dim small" style="margin-top:8px;">Live compilation for C, C++, Java and PERL is not available inside this browser tool. Verify your code in an offline compiler or online IDE, then check the box above.</div></div>'
+    +'<div class="qactions"><div class="spacer"></div><button class="btn-primary" onclick="App.confirmSubmitSection()">Submit section</button></div>'
+  +'</div></div>';
+}
+
+function renderBreak(stage){
+  return '<div class="stagewrap centered"><div class="mainpanel card narrow">'
+    +'<div class="qhead"><span class="qnum">'+escapeHtml(stage.name||'Break')+'</span>'
+    +'<div class="clockbox"><span id="timerDisplay" class="timer"></span><div class="fillbar"><div id="stageProgressFill" class="fill"></div></div></div></div>'
+    +'<div class="qprompt">Take a short breather before the next coding round.</div>'
+    +'<div class="qactions"><div class="spacer"></div><button class="btn-primary" onclick="App.skipBreak()">Skip break</button></div>'
+  +'</div></div>';
+}
+
+function renderRunning(){
+  const stage = App.stages[App.stageIndex]; const resp = App.responses[App.stageIndex];
+  let body;
+  switch(stage.type){
+    case 'block': body = renderBlock(stage,resp); break;
+    case 'per_item_timer': body = renderPerItemTimer(stage,resp); break;
+    case 'instruction': body = renderInstruction(stage); break;
+    case 'passage_recall': body = renderPassageRecall(stage,resp); break;
+    case 'essay': body = renderEssay(stage,resp); break;
+    case 'coding': body = renderCoding(stage,resp); break;
+    case 'break': body = renderBreak(stage); break;
+    default: body = '<div class="card">Unknown stage type.</div>';
+  }
+  return renderTopBar()+'<div class="main">'+body+'</div>';
+}
+
+function renderPatternTable(){
+  const rows = App.stages.map(function(st){
+    const dur = stageDuration(st);
+    let itemCount = '—';
+    if(st.items) itemCount = st.items.length;
+    return '<tr><td>'+escapeHtml(st.sectionName)+'</td><td>'+escapeHtml(st.name||labelForType(st.type))+'</td><td>'+itemCount+'</td><td>'+fmtTime(dur)+'</td></tr>';
+  }).join('');
+  const total = App.stages.reduce(function(s,st){ return s+stageDuration(st); },0);
+  return '<table class="patterntbl"><thead><tr><th>Section</th><th>Part</th><th>Items</th><th>Duration</th></tr></thead><tbody>'+rows
+    +'<tr><td colspan="3" style="text-align:right;font-weight:700;">Total</td><td style="font-weight:700;">'+fmtTime(total)+'</td></tr></tbody></table>';
+}
+
+function renderConfirm(){
+  return '<div class="setupwrap">'
+    +'<h1 class="pagetitle">Confirm your paper</h1>'
+    +'<p class="lede">Double-check this matches the pattern you intended before you start the clock.</p>'
+    +'<div class="card">'+renderPatternTable()+'</div>'
+    +'<div class="card" style="margin-top:14px;">'
+      +'<b>A few rules carried over from the official pattern:</b>'
+      +'<ul class="small dim" style="margin-top:8px;">'
+        +'<li>Non-MCQ numeric answers should be whole numbers, no symbols (%, km, Rs, etc).</li>'
+        +'<li>Once a section\'s clock runs out, it auto-submits and you move on — there is no going back.</li>'
+        +'<li>Passage text disappears once the reading phase ends.</li>'
+        +'<li>Coding: no hardcoded input values — write against the inputs the system supplies.</li>'
+      +'</ul>'
+    +'</div>'
+    +'<div class="qactions" style="margin-top:18px;">'
+      +'<button class="btn-ghost" onclick="App.backToSetup()">Back</button>'
+      +'<div class="spacer"></div>'
+      +'<button class="btn-primary" onclick="App.beginTest()">Begin test</button>'
+    +'</div>'
+  +'</div>';
+}
+
+function renderSetup(){
+  let html = '<div class="setupwrap">';
+  html += '<h1 class="pagetitle">NQT Mock Test Runner</h1>';
+  html += '<p class="lede">Paste a question paper JSON below (schema in the box), or load the structural sample to try the mechanics first.</p>';
+
+  if(App.savedProgress){
+    html += '<div class="banner"><div>You have an in-progress attempt saved from '+escapeHtml(new Date(App.savedProgress.startedAt).toLocaleString())+'.</div>'
+      +'<div><button class="btn-primary btn-sm" onclick="App.resumeProgress()">Resume</button> '
+      +'<button class="btn-ghost btn-sm" onclick="App.discardProgress()">Discard</button></div></div>';
+  }
+
+  html += '<textarea id="paperInput" class="papertxt">'+escapeHtml(JSON.stringify(SAMPLE_PAPER,null,2))+'</textarea>';
+
+  if(App.parseError){ html += '<div class="errorlist">'+escapeHtml(App.parseError)+'</div>'; }
+  if(App.validationErrors){
+    html += '<div class="errorlist"><b>Fix these before starting:</b><ul>'+App.validationErrors.map(function(e){ return '<li>'+escapeHtml(e)+'</li>'; }).join('')+'</ul></div>';
+  }
+
+  html += '<div class="qactions" style="margin-top:14px;">'
+    +'<button class="btn-ghost" onclick="App.loadSampleIntoTextarea()">Reset to sample</button>'
+    +'<div class="spacer"></div>'
+    +'<button class="btn-primary" onclick="App.loadPaperFromTextarea()">Validate &amp; continue</button>'
+  +'</div>';
+
+  html += '<details class="schema"><summary>Question paper schema</summary><pre>'+escapeHtml(
+'{\n'+
+'  "title": "string",\n'+
+'  "sections": [\n'+
+'    // MCQ/numeric block — one shared timer, free navigation (Numerical, Reasoning, Adv. Quant)\n'+
+'    { "id","name","type":"block","durationSec":1500,\n'+
+'      "items":[{ "id","qtype":"mcq"|"numeric","prompt","options":[...] (mcq only) }] },\n\n'+
+'    // Verbal Ability is a "sequence" of parts run back to back:\n'+
+'    { "id","name","type":"sequence","parts":[\n'+
+'      { "id","name","type":"per_item_timer","perItemSec":25,\n'+
+'        "items":[{ "id","prompt" }] },                       // Sentence Completion\n'+
+'      { "id","name","type":"instruction","durationSec":25,"text":"..." },\n'+
+'      { "id","name","type":"passage_recall","readSec":30,"writeSec":90,\n'+
+'        "items":[{ "id","passage":"..." }] },\n'+
+'      { "id","name","type":"essay","durationSec":540,"minWords":100,"prompt":"..." }  // Email Writing\n'+
+'    ]},\n\n'+
+'    // Coding — one section timer, code editor per item\n'+
+'    { "id","name","type":"coding","durationSec":2100,\n'+
+'      "items":[{ "id","title","statement","languages":["c","cpp","java","perl","python"],\n'+
+'                 "starterCode":{"python":"..."},"publicTests":[{"input":"...","output":"..."}] }] },\n\n'+
+'    { "id","name","type":"break","durationSec":60 }\n'+
+'  ]\n'+
+'}')+'</pre></details>';
+
+  if(App.resultsIndex && App.resultsIndex.length){
+    html += '<div class="card" style="margin-top:20px;"><div class="palhead">Past attempts</div>';
+    App.resultsIndex.forEach(function(r){
+      html += '<div class="attemptrow"><span>'+escapeHtml(r.title)+'</span><span class="dim small">'+escapeHtml(new Date(r.finishedAt).toLocaleString())+'</span><div class="spacer"></div>'
+        +'<button class="btn-ghost btn-sm" onclick="App.viewPastResult('+JSON.stringify(r.id)+')">'+(App.viewingResultId===r.id?'Hide':'View')+'</button>'
+        +'<button class="btn-danger btn-sm" onclick="App.deletePastResult('+JSON.stringify(r.id)+')">Delete</button></div>';
+      if(App.viewingResultId===r.id){
+        const data = App.resultCache[r.id];
+        html += '<div style="margin:10px 0;">'
+          +(data? ('<textarea class="resultjson" readonly>'+escapeHtml(JSON.stringify(data,null,2))+'</textarea>'
+              +'<div class="qactions"><button class="btn-ghost btn-sm" onclick="App.copyPastResult('+JSON.stringify(r.id)+')">Copy JSON</button></div>')
+            : '<span class="dim small">Loading…</span>')
+        +'</div>';
+      }
+    });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function renderResults(){
+  const results = App.lastResults;
+  const rows = results.stages.map(function(s){
+    let extra = '';
+    if(s.items){
+      const answered = s.items.filter(function(it){ return it.response!==null && it.response!==undefined && it.response!==''; }).length;
+      extra = answered+' / '+s.items.length+' answered';
+    } else if(s.type==='essay'){
+      extra = s.wordCount+' words';
+    }
+    const used = s.timeUsedSec!==undefined ? fmtTime(s.timeUsedSec) : '—';
+    const allotted = s.allottedSec!==undefined ? fmtTime(s.allottedSec) : (s.allottedPerItemSec? fmtTime(s.allottedPerItemSec)+'/item' : '—');
+    return '<tr><td>'+escapeHtml(s.sectionName)+'</td><td>'+escapeHtml(s.name||labelForType(s.type))+'</td><td>'+allotted+'</td><td>'+used+'</td><td>'+extra+'</td></tr>';
+  }).join('');
+  return '<div class="setupwrap">'
+    +'<h1 class="pagetitle">Test complete</h1>'
+    +'<p class="lede">Total time: '+fmtTime(results.meta.totalActualSec)+' of '+fmtTime(results.meta.totalPlannedSec)+' planned. Copy or download the JSON below and send it back to Claude for scoring and analysis.</p>'
+    +'<div class="card"><table class="patterntbl"><thead><tr><th>Section</th><th>Part</th><th>Allotted</th><th>Used</th><th>Notes</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'<div class="qactions" style="margin-top:16px;">'
+      +'<button class="btn-primary" onclick="App.copyResultsJson()">Copy JSON</button>'
+      +'<button class="btn-ghost" onclick="App.downloadResultsJson()">Download .json</button>'
+      +'<div class="spacer"></div>'
+      +'<button class="btn-ghost" onclick="App.startNewAttempt()">Retake same paper</button>'
+      +'<button class="btn-ghost" onclick="App.loadDifferentPaper()">Load a different paper</button>'
+    +'</div>'
+    +'<textarea class="resultjson" readonly style="margin-top:14px;">'+escapeHtml(JSON.stringify(results,null,2))+'</textarea>'
+  +'</div>';
+}
+
+function render(){
+  const app = document.getElementById('app');
+  if(App.view==='setup') app.innerHTML = renderSetup();
+  else if(App.view==='confirm') app.innerHTML = renderConfirm();
+  else if(App.view==='running') app.innerHTML = renderRunning();
+  else if(App.view==='results') app.innerHTML = renderResults();
+  if(App.view==='running') updateClockDOM();
+}
+
+/* ---------------------------- init ---------------------------- */
+async function initApp(){
+  App.savedProgress = await storageGetJSON('nqt_progress');
+  App.resultsIndex = (await storageGetJSON('nqt_results_index')) || [];
+  render();
+}
+initApp();
+</script>
+</body>
+</html>
